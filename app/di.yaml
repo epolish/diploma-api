@@ -1,0 +1,9 @@
+services:
+  db_connection:
+    class:  ExpertSystem\Resource\Connection
+    calls:
+      - [configure, ['%db.options%']]
+  db_manager:
+    class:  ExpertSystem\Resource\Manager
+    calls:
+      - [setConnection, ['@db_connection']]

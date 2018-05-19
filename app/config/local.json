@@ -1,0 +1,6 @@
+{
+  "debug": true,
+  "db.options": {
+    "full_url": "bolt://neo4j:Qq241320@127.0.0.1:7687"
+  }
+}

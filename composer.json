@@ -1,0 +1,17 @@
+{
+    "require": {
+        "silex/silex": "^2.0",
+        "lokhman/silex-config": "^2.0",
+        "graphaware/neo4j-php-client": "4.6",
+        "graphaware/neo4j-php-ogm": "@rc",
+        "symfony/dependency-injection": "^3.4",
+        "symfony/config": "^3.4",
+        "symfony/yaml": "^3.4",
+        "symfony/serializer": "^3.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "ExpertSystem\\": "src/ExpertSystem"
+        }
+    }
+}
