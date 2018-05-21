@@ -135,7 +135,10 @@ $app->post('/', function(Request $request) use ($app, $manager) {
 
 $app->post('/import', function(Request $request) use ($app, $manager) {
     try {
-        $manager->import(urldecode($request->request->get('url')));
+        $manager->import(
+            urldecode($request->request->get('url')),
+            $request->request->get('options')
+        );
 
         return $app['response_handle'](['success' => 'Import has done successfully']);
     } catch (Exception $ex) {

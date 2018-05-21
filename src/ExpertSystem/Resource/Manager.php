@@ -292,14 +292,17 @@ class Manager implements ManagerInterface
 
     /**
      * @param $url
+     * @param $options
      * @return array|mixed
      * @throws \Exception
      */
-    public function import($url)
+    public function import($url, $options)
     {
-        $query = $this->getClient()->createQuery('MATCH (n) DETACH DELETE n');
+        if (!$options['append_mode']) {
+            $query = $this->getClient()->createQuery('MATCH (n) DETACH DELETE n');
 
-        $query->execute();
+            $query->execute();
+        }
 
         $query = $this->getClient()->createQuery(
             'LOAD CSV WITH HEADERS FROM {url} AS line ' .
