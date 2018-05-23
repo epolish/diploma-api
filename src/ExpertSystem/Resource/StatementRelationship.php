@@ -28,6 +28,12 @@ class StatementRelationship
     protected $value;
 
     /**
+     * @OGM\Property(type="int")
+     * @var int
+     */
+    protected $supportLevelValue;
+
+    /**
      * @var StatementNode
      *
      * @OGM\EndNode(targetEntity="StatementNode")
@@ -46,10 +52,16 @@ class StatementRelationship
      * @param StatementNode $childNode
      * @param StatementNode $parentNode
      * @param null $value
+     * @param null $supportLevelValue
      */
-    public function __construct(StatementNode $childNode, StatementNode $parentNode = null, $value = null)
-    {
+    public function __construct(
+        StatementNode $childNode,
+        StatementNode $parentNode = null,
+        $value = null,
+        $supportLevelValue = null
+    ) {
         $this->setValue($value);
+        $this->setSupportLevelValue($supportLevelValue);
         $this->setChildNode($childNode);
         $this->setParentNode($parentNode);
     }
@@ -68,6 +80,22 @@ class StatementRelationship
     public function setValue($value)
     {
         $this->value = $value;
+    }
+
+    /**
+     * @return int
+     */
+    public function getSupportLevelValue()
+    {
+        return $this->supportLevelValue;
+    }
+
+    /**
+     * @param int $supportLevelValue
+     */
+    public function setSupportLevelValue($supportLevelValue)
+    {
+        $this->supportLevelValue = $supportLevelValue;
     }
 
     /**

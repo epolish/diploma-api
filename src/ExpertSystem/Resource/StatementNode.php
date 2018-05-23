@@ -87,16 +87,22 @@ class StatementNode
     /**
      * @param StatementNode $childNode
      * @param string $relationValue
+     * @param int $supportLevelValue
      * @throws StatementRelationshipHasNoValueException
      */
-    public function addChildNode($childNode, $relationValue)
+    public function addChildNode($childNode, $relationValue, $supportLevelValue)
     {
         if (!$relationValue) {
             throw new StatementRelationshipHasNoValueException();
         }
 
         $this->getChildNodes()->add(
-            new StatementRelationship($childNode, $this, $relationValue)
+            new StatementRelationship(
+                $childNode,
+                $this,
+                $relationValue,
+                $supportLevelValue
+            )
         );
     }
 }

@@ -20,11 +20,15 @@ $app->before(function (Request $request) {
     }
 });
 
-$app->get('/', function() use ($app, $manager) {
+$app->get('/', function(Request $request) use ($app, $manager) {
     try {
-        $nodeValues = array_map(function ($node) {
-            return $node->getValue();
-        }, $manager->getAllNodes(['value' => 'DESC']));
+        if ($request->get('withParents') === null) {
+            $nodeValues = array_map(function ($node) {
+                return $node->getValue();
+            }, $manager->getAllNodes(['value' => 'DESC']));
+        } else {
+            $nodeValues = $manager->getAllNodesValuesWithParents();
+        }
 
         return $app['response_handle']($nodeValues);
     } catch (Exception $ex) {
@@ -47,7 +51,8 @@ $app->get('/{value}', function($value) use ($app, $manager) {
             foreach ($node->getChildNodes() as $childNodeRelationship) {
                 $childValues[] = [
                     'relationship_value' => $childNodeRelationship->getValue(),
-                    'statement_value' => $childNodeRelationship->getChildNode()->getValue()
+                    'statement_value' => $childNodeRelationship->getChildNode()->getValue(),
+                    'relationship_support_level_value' => $childNodeRelationship->getSupportLevelValue()
                 ];
             }
 
@@ -55,6 +60,7 @@ $app->get('/{value}', function($value) use ($app, $manager) {
                 'child_statements' => $childValues,
                 'statement_value' => $node->getValue(),
                 'parent_relationship_value' => null,
+                'parent_relationship_support_level_value' => null,
                 'parent_statement_value' => null
             ]);
         }
@@ -66,7 +72,8 @@ $app->get('/{value}', function($value) use ($app, $manager) {
         foreach ($childNode->getChildNodes() as $childNodeRelationship) {
             $childValues[] = [
                 'relationship_value' => $childNodeRelationship->getValue(),
-                'statement_value' => $childNodeRelationship->getChildNode()->getValue()
+                'statement_value' => $childNodeRelationship->getChildNode()->getValue(),
+                'relationship_support_level_value' => $childNodeRelationship->getSupportLevelValue()
             ];
         }
 
@@ -74,6 +81,7 @@ $app->get('/{value}', function($value) use ($app, $manager) {
             'child_statements' => $childValues,
             'statement_value' => $childNode->getValue(),
             'parent_relationship_value' => $relationship->getValue(),
+            'parent_relationship_support_level_value' => $relationship->getSupportLevelValue(),
             'parent_statement_value' => $parentNode ? $parentNode->getValue() : null
         ]);
     } catch (Exception $ex) {
@@ -87,12 +95,14 @@ $app->put('/', function(Request $request) use ($app, $manager) {
         $newStatementValue = $request->request->get('new_statement_value');
         $newParentStatementValue = $request->request->get('new_parent_statement_value');
         $newParentRelationshipValue = $request->request->get('new_parent_relationship_value');
+        $newParentRelationshipSupportLevelValue = $request->request->get('new_parent_relationship_support_level_value');
 
         if ($newParentStatementValue && $statementValue != $newParentStatementValue) {
             $manager->updateNodeLink(
                 $statementValue,
                 $newParentStatementValue,
-                $newParentRelationshipValue
+                $newParentRelationshipValue,
+                $newParentRelationshipSupportLevelValue
             );
         }
 
@@ -124,7 +134,8 @@ $app->post('/', function(Request $request) use ($app, $manager) {
         $manager->createNode(
             $request->request->get('statement_value'),
             $request->request->get('parent_statement_value'),
-            $request->request->get('parent_relationship_value')
+            $request->request->get('parent_relationship_value'),
+            $request->request->get('parent_relationship_support_level_value')
         );
 
         return $app['response_handle'](['success' => 'Statement created successfully']);

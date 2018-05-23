@@ -19,6 +19,7 @@ use ExpertSystem\Exception\StatementRootNodeCannotBeMovedException;
 use ExpertSystem\Exception\StatementRootNodeAlreadyExistsException;
 use ExpertSystem\Exception\StatementRelationshipHasNoValueException;
 use ExpertSystem\Exception\StatementNodeDisconnectedFromRootException;
+use ExpertSystem\Exception\StatementRelationshipHasNoSupportLevelValueException;
 
 class Manager implements ManagerInterface
 {
@@ -116,6 +117,7 @@ class Manager implements ManagerInterface
     public function getRelationship($value)
     {
         $relationValue = null;
+        $parentRelationSupportLevelValue = null;
         $childNode = $this->getNode($value);
         $parentNode = $this->getParentNode($value);
 
@@ -123,11 +125,17 @@ class Manager implements ManagerInterface
             foreach ($parentNode->getChildNodes() as $childRelationship) {
                 if ($childRelationship->getChildNode()->getValue() == $childNode->getValue()) {
                     $relationValue = $childRelationship->getValue();
+                    $parentRelationSupportLevelValue = $childRelationship->getSupportLevelValue();
                 }
             }
         }
 
-        return new StatementRelationship($childNode, $parentNode, $relationValue);
+        return new StatementRelationship(
+            $childNode,
+            $parentNode,
+            $relationValue,
+            $parentRelationSupportLevelValue
+        );
     }
 
     /**
@@ -163,13 +171,26 @@ class Manager implements ManagerInterface
     /**
      * @param string $value
      * @param string $newParentValue
-     * @param string|null $parentRelationshipValue
+     * @param string $parentRelationshipValue
+     * @param string $parentRelationSupportLevelValue
      * @return mixed|void
      * @throws StatementNodeDoesNotExistException
      * @throws \Exception
      */
-    public function updateNodeLink($value, $newParentValue, $parentRelationshipValue)
-    {
+    public function updateNodeLink(
+        $value,
+        $newParentValue,
+        $parentRelationshipValue,
+        $parentRelationSupportLevelValue
+    ) {
+        if (!$parentRelationshipValue) {
+            throw new StatementRelationshipHasNoValueException();
+        }
+
+        if (!is_int($parentRelationSupportLevelValue)) {
+            throw new StatementRelationshipHasNoSupportLevelValueException();
+        }
+
         $node = $this->getNode($value);
         $rootNode = $this->getRootNode();
         $parentNode = $this->getParentNode($value);
@@ -180,12 +201,20 @@ class Manager implements ManagerInterface
         }
 
         $this->clearNodeParentLink($value);
-        $newParentNode->addChildNode($node, $parentRelationshipValue);
+        $newParentNode->addChildNode(
+            $node,
+            $parentRelationshipValue,
+            $parentRelationSupportLevelValue
+        );
         $this->getClient()->flush();
 
         if (!$this->traceRoot($rootNode->getValue(), $value)) {
             $this->clearNodeParentLink($value);
-            $parentNode->addChildNode($node, $parentRelationshipValue);
+            $parentNode->addChildNode(
+                $node,
+                $parentRelationshipValue,
+                $parentRelationSupportLevelValue
+            );
             $this->getClient()->flush();
 
             throw new StatementNodeDisconnectedFromRootException();
@@ -201,7 +230,8 @@ class Manager implements ManagerInterface
     public function traceRoot($startValue, $endValue)
     {
         $query = $this->getClient()->createQuery(
-            'MATCH n = (s)-[*]->(e) WHERE s.value = {start_value} AND e.value = {end_value} RETURN n'
+            'MATCH n = (s)-[*]->(e) WHERE s.value = {start_value} '.
+                'AND e.value = {end_value} RETURN n'
         );
 
         $query->setParameter('end_value', $endValue);
@@ -261,14 +291,19 @@ class Manager implements ManagerInterface
      * @param string $value
      * @param null $parentValue
      * @param null $parentRelationshipValue
+     * @param null $parentRelationSupportLevelValue
      * @return mixed|void
      * @throws StatementNodeAlreadyExistsException
      * @throws StatementNodeDoesNotExistException
      * @throws StatementRootNodeAlreadyExistsException
      * @throws \Exception
      */
-    public function createNode($value, $parentValue = null, $parentRelationshipValue = null)
-    {
+    public function createNode(
+        $value,
+        $parentValue = null,
+        $parentRelationshipValue = null,
+        $parentRelationSupportLevelValue = null
+    ) {
         if (!$parentValue && $this->getRootNode()) {
             throw new StatementRootNodeAlreadyExistsException();
         }
@@ -277,14 +312,22 @@ class Manager implements ManagerInterface
             throw new StatementRelationshipHasNoValueException();
         }
 
+        if ($parentValue && !is_int($parentRelationSupportLevelValue)) {
+            throw new StatementRelationshipHasNoSupportLevelValueException();
+        }
+
         $this->validateNode($value);
 
         $node = new StatementNode($value);
 
-        if ($parentValue && $parentRelationshipValue) {
+        if ($parentValue) {
             $parentNode = $this->getNode($parentValue);
 
-            $parentNode->addChildNode($node, $parentRelationshipValue);
+            $parentNode->addChildNode(
+                $node,
+                $parentRelationshipValue,
+                $parentRelationSupportLevelValue
+            );
         }
 
         $this->getClient()->persist($node);
@@ -308,7 +351,8 @@ class Manager implements ManagerInterface
             'LOAD CSV WITH HEADERS FROM {url} AS line ' .
             'MERGE (n:Statement {value:line.statement_value}) ' .
             'MERGE (p:Statement {value:line.parent_statement_value}) ' .
-            'MERGE (p)-[:HAS_CHILD_STATEMENT {value:line.parent_relationship_value}]->(n)'
+            'MERGE (p)-[:HAS_CHILD_STATEMENT {value:line.parent_relationship_value, '.
+                'supportLevelValue:line.parent_relationship_support_level_value}]->(n)'
         );
 
         $query->setParameter('url', $url);
@@ -317,6 +361,21 @@ class Manager implements ManagerInterface
 
         $query = $this->getClient()->createQuery(
             'MATCH (n:Statement {value:"\'\'"}) DETACH DELETE n'
+        );
+
+        return $query->execute();
+    }
+
+    /**
+     * @return array|mixed
+     * @throws \Exception
+     */
+    public function getAllNodesValuesWithParents()
+    {
+        $query = $this->getClient()->createQuery(
+            'MATCH (n) OPTIONAL MATCH (n)<-[]-(m) RETURN ' .
+                'n.value AS statement_value, ' .
+                'm.value AS parent_statement_value'
         );
 
         return $query->execute();

@@ -7,6 +7,7 @@
  */
 
 namespace ExpertSystem;
+
 use ExpertSystem\Resource\StatementNode;
 use ExpertSystem\Resource\StatementRelationship;
 
@@ -70,16 +71,28 @@ interface ManagerInterface
     /**
      * @param string $value
      * @param string $newParentValue
-     * @param string|null $parentRelationshipValue
+     * @param string $parentRelationshipValue
+     * @param string $parentRelationSupportLevelValue
      * @return mixed
      */
-    public function updateNodeLink($value, $newParentValue, $parentRelationshipValue);
+    public function updateNodeLink(
+        $value,
+        $newParentValue,
+        $parentRelationshipValue,
+        $parentRelationSupportLevelValue
+    );
 
     /**
      * @param string $value
      * @param string|null $parentValue
      * @param string|null $parentRelationshipValue
+     * @param string|null $parentRelationSupportLevelValue
      * @return mixed
      */
-    public function createNode($value, $parentValue = null, $parentRelationshipValue = null);
+    public function createNode(
+        $value,
+        $parentValue = null,
+        $parentRelationshipValue = null,
+        $parentRelationSupportLevelValue = null
+    );
 }
